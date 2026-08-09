@@ -44,7 +44,6 @@ export default function Login() {
           <h1>Toda a agenda da equipe de limpeza, num so lugar.</h1>
           <p>Organize clientes, profissionais e horarios sem risco de agendamentos duplicados.</p>
         </div>
-        <span className="selo">v1.0 &middot; Sistema interno</span>
       </div>
 
       <div className="login-form-wrap">
