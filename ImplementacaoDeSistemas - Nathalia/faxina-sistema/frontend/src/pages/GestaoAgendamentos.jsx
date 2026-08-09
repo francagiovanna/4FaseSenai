@@ -1,10 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import TopBar from '../components/TopBar.jsx';
+import StatusBadge from '../components/StatusBadge.jsx';
 import { api } from '../api.js';
 
-// RF 7.1.1: algoritmo de ordenacao implementado manualmente (quicksort),
-// aplicado sobre a chave escolhida pelo usuario (cliente ou data/horario).
 function quicksort(lista, chave) {
   if (lista.length <= 1) return lista;
   const [pivo, ...resto] = lista;
@@ -31,6 +30,7 @@ export default function GestaoAgendamentos() {
   const [profissionais, setProfissionais] = useState([]);
   const [criterio, setCriterio] = useState('cliente');
   const [erroGeral, setErroGeral] = useState('');
+  const [carregando, setCarregando] = useState(true);
 
   const [selecionadoId, setSelecionadoId] = useState(null);
   const [form, setForm] = useState(null);
@@ -50,9 +50,13 @@ export default function GestaoAgendamentos() {
 
   useEffect(() => {
     async function iniciar() {
-      const p = await api('/profissionais');
-      setProfissionais(p);
-      carregarAgendamentos();
+      try {
+        const p = await api('/profissionais');
+        setProfissionais(p);
+        await carregarAgendamentos();
+      } finally {
+        setCarregando(false);
+      }
     }
     iniciar();
   }, [carregarAgendamentos]);
@@ -62,8 +66,6 @@ export default function GestaoAgendamentos() {
     [agendamentos, criterio]
   );
 
-  // RF 7.1.2 e 7.1.3: seleciona o agendamento e habilita a edicao de
-  // tipo de servico, profissional, data e horario.
   function selecionar(item) {
     setSelecionadoId(item.id);
     setErroMov('');
@@ -85,8 +87,6 @@ export default function GestaoAgendamentos() {
     setForm((atual) => ({ ...atual, [campo]: valor }));
   }
 
-  // RF 7.1.4: verificacao automatica de conflito de horario / indisponibilidade
-  // do profissional a cada movimentacao, feita pelo backend no PUT.
   async function handleSubmit(evento) {
     evento.preventDefault();
     setErroMov('');
@@ -135,42 +135,46 @@ export default function GestaoAgendamentos() {
               </span>
             </div>
 
-            {ordenados.length === 0 ? (
+            {carregando ? (
+              <div className="carregando-lista"><span className="spinner"></span> Carregando agendamentos...</div>
+            ) : ordenados.length === 0 ? (
               <div className="vazio">
                 <strong>Nenhum agendamento cadastrado</strong>
                 Cadastre um agendamento na outra tela primeiro.
               </div>
             ) : (
-              <table>
-                <thead>
-                  <tr><th>Cliente</th><th>Profissional</th><th>Tipo</th><th>Data</th><th>Horario</th><th>Status</th></tr>
-                </thead>
-                <tbody>
-                  {ordenados.map((a) => (
-                    <tr
-                      key={a.id}
-                      className={`linha-selecionavel ${a.id === selecionadoId ? 'selecionada' : ''}`}
-                      onClick={() => selecionar(a)}
-                    >
-                      <td>{a.cliente_nome}</td>
-                      <td>{a.profissional_nome}</td>
-                      <td><span className={`selo-tipo ${a.tipo_servico}`}>{a.tipo_servico}</span></td>
-                      <td style={{ fontFamily: 'var(--fonte-dado)', fontSize: '13px' }}>{formatarData(a.data_agendamento)}</td>
-                      <td style={{ fontFamily: 'var(--fonte-dado)', fontSize: '13px' }}>{formatarHora(a.hora_inicio)} - {formatarHora(a.hora_fim)}</td>
-                      <td>{a.status}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="tabela-scroll">
+                <table>
+                  <thead>
+                    <tr><th>Cliente</th><th>Profissional</th><th>Tipo</th><th>Data</th><th>Horario</th><th>Status</th></tr>
+                  </thead>
+                  <tbody>
+                    {ordenados.map((a) => (
+                      <tr
+                        key={a.id}
+                        className={`linha-selecionavel ${a.id === selecionadoId ? 'selecionada' : ''}`}
+                        onClick={() => selecionar(a)}
+                      >
+                        <td>{a.cliente_nome}</td>
+                        <td>{a.profissional_nome}</td>
+                        <td><span className={`selo-tipo ${a.tipo_servico}`}>{a.tipo_servico}</span></td>
+                        <td style={{ fontFamily: 'var(--fonte-dado)', fontSize: '13px' }}>{formatarData(a.data_agendamento)}</td>
+                        <td style={{ fontFamily: 'var(--fonte-dado)', fontSize: '13px' }}>{formatarHora(a.hora_inicio)} - {formatarHora(a.hora_fim)}</td>
+                        <td><StatusBadge status={a.status} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
 
           <div className="form-gestao">
             {!form ? (
-              <>
-                <h3>Nenhum agendamento selecionado</h3>
-                <p className="ajuda">Clique em um agendamento na lista ao lado para editar tipo de servico, profissional, data e horario.</p>
-              </>
+              <div className="vazio vazio-lateral">
+                <strong>Nenhum agendamento selecionado</strong>
+                Clique em um agendamento na lista ao lado para editar tipo de servico, profissional, data e horario.
+              </div>
             ) : (
               <>
                 <h3>Movimentar agendamento #{selecionadoId}</h3>

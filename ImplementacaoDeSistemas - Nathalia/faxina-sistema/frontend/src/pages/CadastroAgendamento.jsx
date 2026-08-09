@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import TopBar from '../components/TopBar.jsx';
+import StatusBadge from '../components/StatusBadge.jsx';
+import ModalConfirmacao from '../components/ModalConfirmacao.jsx';
 import { api } from '../api.js';
 
 const VAZIO_FORM = {
@@ -38,11 +40,14 @@ export default function CadastroAgendamento() {
   const [profissionais, setProfissionais] = useState([]);
   const [busca, setBusca] = useState('');
   const [erroLista, setErroLista] = useState('');
+  const [carregando, setCarregando] = useState(true);
 
   const [modalAberto, setModalAberto] = useState(false);
   const [form, setForm] = useState(VAZIO_FORM);
   const [erroModal, setErroModal] = useState('');
   const [salvando, setSalvando] = useState(false);
+
+  const [idParaExcluir, setIdParaExcluir] = useState(null);
 
   const carregarAgendamentos = useCallback(async (termo = '') => {
     try {
@@ -57,10 +62,14 @@ export default function CadastroAgendamento() {
 
   useEffect(() => {
     async function iniciar() {
-      const [c, p] = await Promise.all([api('/clientes'), api('/profissionais')]);
-      setClientes(c);
-      setProfissionais(p);
-      carregarAgendamentos();
+      try {
+        const [c, p] = await Promise.all([api('/clientes'), api('/profissionais')]);
+        setClientes(c);
+        setProfissionais(p);
+        await carregarAgendamentos();
+      } finally {
+        setCarregando(false);
+      }
     }
     iniciar();
   }, [carregarAgendamentos]);
@@ -115,20 +124,20 @@ export default function CadastroAgendamento() {
       setModalAberto(false);
       carregarAgendamentos(busca);
     } catch (falha) {
-      // Cobre erro de validacao do servidor e conflito de horario (RF 7.1.4).
       setErroModal(falha.message);
     } finally {
       setSalvando(false);
     }
   }
 
-  async function excluir(id) {
-    if (!confirm('Tem certeza que deseja excluir este agendamento?')) return;
+  async function confirmarExclusao() {
     try {
-      await api(`/agendamentos/${id}`, { method: 'DELETE' });
+      await api(`/agendamentos/${idParaExcluir}`, { method: 'DELETE' });
       carregarAgendamentos(busca);
     } catch (falha) {
       setErroLista(falha.message);
+    } finally {
+      setIdParaExcluir(null);
     }
   }
 
@@ -141,27 +150,38 @@ export default function CadastroAgendamento() {
             <Link to="/" className="voltar">&larr; Voltar ao painel</Link>
             <h2 style={{ marginTop: '6px' }}>Cadastro de agendamento</h2>
           </div>
-          <button className="btn-primario" onClick={abrirModalNovo}>+ Novo agendamento</button>
+          <button className="btn-primario btn-icone" onClick={abrirModalNovo}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Novo agendamento
+          </button>
         </div>
 
         <div className={`alerta erro ${erroLista ? 'mostrar' : ''}`}>{erroLista}</div>
 
         <div className="painel">
           <div className="painel-toolbar">
-            <input
-              type="search"
-              className="busca"
-              placeholder="Buscar por cliente, profissional ou tipo de servico..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              onKeyDown={handleBuscaKeyDown}
-            />
-            <button className="btn-secundario" onClick={() => { setBusca(''); carregarAgendamentos(); }}>
-              Limpar
-            </button>
+            <div className="busca-wrap">
+              <svg className="icone-busca" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="search"
+                className="busca"
+                placeholder="Buscar por cliente, profissional ou tipo de servico..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                onKeyDown={handleBuscaKeyDown}
+              />
+            </div>
+            <button className="btn-secundario" onClick={() => carregarAgendamentos(busca)}>Buscar</button>
+            <button className="btn-texto" onClick={() => { setBusca(''); carregarAgendamentos(); }}>Limpar</button>
           </div>
 
-          {agendamentos.length === 0 ? (
+          {carregando ? (
+            <div className="carregando-lista"><span className="spinner"></span> Carregando agendamentos...</div>
+          ) : agendamentos.length === 0 ? (
             <div className="vazio">
               <strong>Nenhum agendamento encontrado</strong>
               Cadastre um novo agendamento ou ajuste o termo de busca.
@@ -181,11 +201,21 @@ export default function CadastroAgendamento() {
                     <td><span className={`selo-tipo ${a.tipo_servico}`}>{a.tipo_servico}</span></td>
                     <td style={{ fontFamily: 'var(--fonte-dado)', fontSize: '13px' }}>{formatarData(a.data_agendamento)}</td>
                     <td style={{ fontFamily: 'var(--fonte-dado)', fontSize: '13px' }}>{formatarHora(a.hora_inicio)} - {formatarHora(a.hora_fim)}</td>
-                    <td>{a.status}</td>
+                    <td><StatusBadge status={a.status} /></td>
                     <td>
                       <div className="acoes-linha">
-                        <button className="btn-secundario" onClick={() => abrirModalEdicao(a)}>Editar</button>
-                        <button className="btn-perigo" onClick={() => excluir(a.id)}>Excluir</button>
+                        <button className="btn-secundario btn-icone" onClick={() => abrirModalEdicao(a)}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                          </svg>
+                          Editar
+                        </button>
+                        <button className="btn-perigo btn-icone" onClick={() => setIdParaExcluir(a.id)}>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </svg>
+                          Excluir
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -269,6 +299,15 @@ export default function CadastroAgendamento() {
           </form>
         </div>
       </div>
+
+      <ModalConfirmacao
+        aberto={idParaExcluir !== null}
+        titulo="Excluir agendamento?"
+        mensagem="Essa acao nao pode ser desfeita. O agendamento sera removido permanentemente do sistema."
+        textoConfirmar="Excluir"
+        onConfirmar={confirmarExclusao}
+        onCancelar={() => setIdParaExcluir(null)}
+      />
     </div>
   );
 }
