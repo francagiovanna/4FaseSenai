@@ -19,13 +19,11 @@ app.use('/api/clientes', clientesRoutes);
 app.use('/api/profissionais', profissionaisRoutes);
 app.use('/api/agendamentos', agendamentosRoutes);
 
-// Front-end React (build gerado por "npm run build" dentro de /frontend).
-// (frontend/vite.config.js ja faz proxy de /api para este servidor).
+
 const frontendDist = path.join(__dirname, 'frontend', 'dist');
 app.use(express.static(frontendDist));
 
-// Fallback de SPA: qualquer rota que nao seja /api/* devolve o index.html,
-// deixando o React Router decidir qual tela renderizar (login, painel, etc).
+
 app.get(/^(?!\/api).*/, (req, res) => {
   res.sendFile(path.join(frontendDist, 'index.html'));
 });
