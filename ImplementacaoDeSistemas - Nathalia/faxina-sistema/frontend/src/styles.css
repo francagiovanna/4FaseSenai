@@ -147,7 +147,6 @@ label {
   color: #fff;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: 56px;
   position: relative;
   overflow: hidden;
@@ -171,6 +170,12 @@ label {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   opacity: 0.85;
+}
+.login-marca .login-conteudo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 .login-marca h1 { font-size: 40px; line-height: 1.15; max-width: 380px; }
 .login-marca p { max-width: 360px; opacity: 0.88; font-size: 15px; }

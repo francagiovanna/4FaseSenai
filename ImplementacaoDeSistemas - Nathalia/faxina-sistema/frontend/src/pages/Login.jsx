@@ -40,7 +40,7 @@ export default function Login() {
     <div className="tela-login">
       <div className="login-marca">
         <span className="selo">Faxina App</span>
-        <div>
+        <div className="login-conteudo">
           <h1>Toda a agenda da equipe de limpeza, num so lugar.</h1>
           <p>Organize clientes, profissionais e horarios sem risco de agendamentos duplicados.</p>
         </div>
