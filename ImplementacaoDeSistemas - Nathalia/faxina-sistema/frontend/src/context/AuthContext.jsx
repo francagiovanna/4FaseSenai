@@ -8,7 +8,6 @@ export function AuthProvider({ children }) {
   const [nome, setNome] = useState(nomeUsuario());
 
   const entrar = useCallback(async (email, senha) => {
-    // Deixa o erro subir para quem chamou (tela de login) tratar a mensagem.
     const dados = await api('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, senha }),

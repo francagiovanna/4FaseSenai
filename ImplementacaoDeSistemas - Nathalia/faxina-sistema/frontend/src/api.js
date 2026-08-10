@@ -20,8 +20,6 @@ export function nomeUsuario() {
   return localStorage.getItem('faxina_nome') || 'Usuario';
 }
 
-// Erro customizado para diferenciar "sessao expirada" de outros erros
-// (o componente que chama pode decidir se redireciona ou nao).
 export class ApiError extends Error {
   constructor(mensagem, status) {
     super(mensagem);
