@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Comentários</title>
+</head>
+<body>
+
+    <h1>Comentários</h1>
+
+    <textarea
+        id="comentario"
+        placeholder="Digite seu comentário"
+    ></textarea>
+
+    <br><br>
+
+    <button onclick="salvar()">
+        Publicar comentário
+    </button>
+
+    <hr>
+
+    <h2>Comentários publicados</h2>
+
+    <div id="lista"></div>
+
+    <script>
+
+        async function salvar() {
+
+            const comentario =
+                document.getElementById("comentario").value;
+
+            await fetch("/comentarios", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    comentario
+                })
+            });
+
+            document.getElementById("comentario").value = "";
+
+            carregar();
+        }
+
+
+        async function carregar() {
+
+            const resposta =
+                await fetch("/comentarios");
+
+            const comentarios =
+                await resposta.json();
+
+            const lista =
+                document.getElementById("lista");
+
+            lista.innerHTML = "";
+
+            comentarios.forEach(comentario => {
+
+                lista.innerHTML += `
+                    <p>${comentario}</p>
+                `;
+
+            });
+        }
+
+        carregar();
+
+    </script>
+
+</body>
+</html>
